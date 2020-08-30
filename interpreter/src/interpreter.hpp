@@ -54,6 +54,7 @@ namespace chip8
 		void ins_8XY3(); // set
 		void ins_8XY4(); // add
 		void ins_8XY5(); // sub
+		void ins_9XY0(); // if
 		void ins_ANNN(); // mem
 		void ins_BNNN(); // jmp
 		void ins_CXNN(); // rand

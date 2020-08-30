@@ -35,6 +35,7 @@ namespace chip8
 		this->table[0x5] = &interpreter::ins_5XY0;
 		this->table[0x6] = &interpreter::ins_6XNN;
 		this->table[0x7] = &interpreter::ins_7XNN;
+		this->table[0x9] = &interpreter::ins_9XY0;
 		this->table[0xA] = &interpreter::ins_ANNN;
 		this->table[0xB] = &interpreter::ins_BNNN;
 		this->table[0xC] = &interpreter::ins_CXNN;
@@ -255,7 +256,20 @@ namespace chip8
 		else
 			this->registers[0xF] = 0;
 
-		this->registers[Vx] -= this->registers[Vy]
+		this->registers[Vx] -= this->registers[Vy];
+	}
+
+	void interpreter::ins_9XY0()
+	{
+		log("if 9XY0");
+		/* if(Vx!=Vy) */
+		/* Skips the next instruction if VX doesn't equal VY. */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+
+		if (this->registers[Vx] != this->registers[Vy])
+			this->program_counter += 2;
+
 	}
 
 	void interpreter::ins_ANNN()
