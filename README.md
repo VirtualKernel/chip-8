@@ -5,3 +5,6 @@ Attempting to write a chip-8 interpreter using various references available.
 
 ### Dependency
 * SDL2
+
+
+![Maze](/interpreter/img/maze.png)
