@@ -1,0 +1,238 @@
+#include "interpreter.hpp"
+
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <algorithm>
+#include <stdlib.h>
+
+#define log(string) std::cout << "[interpreter][" << __FUNCTION__ << "] " << string << std::endl;
+
+#define merge(b1, b2) (b1 << 8 | b2)
+#define extract(b1,msk) (b1 & msk)
+
+namespace chip8
+{
+	interpreter::interpreter()
+	{
+		log("constructing interpreter");
+		
+		this->program_counter = 0x200;
+
+		std::fill_n(this->table, 0xF + 1, &interpreter::ins_NOP);
+		std::fill_n(this->table_0000, 0xE + 1, &interpreter::ins_NOP);
+
+		/* Singles */
+		this->table[0x0] = &interpreter::fnd_0000;
+		this->table[0x1] = &interpreter::ins_1NNN;
+		this->table[0x2] = &interpreter::ins_2NNN;
+		this->table[0x3] = &interpreter::ins_3XNN;
+		this->table[0x4] = &interpreter::ins_4XNN;
+		this->table[0x5] = &interpreter::ins_5XY0;
+		this->table[0x6] = &interpreter::ins_6XNN;
+		this->table[0x7] = &interpreter::ins_7XNN;
+		this->table[0xA] = &interpreter::ins_ANNN;
+		this->table[0xB] = &interpreter::ins_BNNN;
+		this->table[0xC] = &interpreter::ins_CXNN;
+		this->table[0xD] = &interpreter::ins_DXYN;
+
+		/* 0000 */
+		this->table_0000[0x0] = &interpreter::ins_00E0;
+		this->table_0000[0xE] = &interpreter::ins_00EE;
+
+		this->ins_00E0(); // Clean video data before we start executing.
+	}
+
+	interpreter::~interpreter() { log("deconstructing interpreter") }
+
+	void interpreter::load_file(const char* file_name)
+	{
+		log("loading file");
+
+		std::ifstream file(file_name, std::ios::binary | std::ios::ate);
+
+		if (file.is_open())
+		{
+			std::streampos file_size = file.tellg();
+			char* data = new char[file_size];
+			file.seekg(0, std::ios::beg);
+			file.read(data, file_size);
+			file.close();
+
+			for (long i = 0; i < file_size; ++i)
+			{
+				this->memory[0x200 + i] = data[i];
+			}
+
+			delete[] data;
+		}
+	}
+
+	void interpreter::exec_ins()
+	{
+		this->instruction = merge(memory[program_counter], memory[program_counter + 1]);
+		this->program_counter += 2;
+		/* TODO
+			Make the function table look nice.
+		*/
+		((*this).*this->table[extract(this->instruction, 0xF000) >> 12])();
+	}
+
+	void interpreter::fnd_0000()
+	{
+		log("0x00E? called, looking up last digit.");
+		((*this).*(this->table_0000[extract(this->instruction, 0x000F)]))();
+	}
+
+	void interpreter::ins_NOP()
+	{	
+		log("nop");
+		std::cout << std::hex << this->instruction << std::endl;
+	}
+
+	void interpreter::ins_00E0()
+	{	
+		log("clear 00E0");
+		/* disp_clear() */
+		memset(this->video, 0, sizeof(video));
+	}
+
+	void interpreter::ins_00EE()
+	{
+		log("ret 00EE");
+		/* return; */
+		--stack_pointer;
+		program_counter = stack[stack_pointer];
+	}
+
+	void interpreter::ins_1NNN()
+	{
+		log("jmp 1NNN");
+		/* goto NNN; */
+		uint16_t NNN = extract(this->instruction, 0x0FFF);
+		program_counter = NNN;
+	}
+
+	void interpreter::ins_2NNN()
+	{
+		log("call 2NNN");
+		/* *(0xNNN)() */
+		uint16_t NNN = extract(this->instruction, 0x0FFF);
+		stack[stack_pointer] = program_counter;
+		++stack_pointer;
+		program_counter = NNN;
+	}
+
+	void interpreter::ins_3XNN()
+	{
+		log("if 3XNN");
+		/* if(Vx==NN) */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t NN = extract(this->instruction, 0x00FF);
+		if (registers[Vx] == NN)
+			program_counter += 2;
+	}
+	
+	void interpreter::ins_4XNN()
+	{
+		log("if not 4XNN");
+		/* if(Vx!=NN) */	
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t NN = extract(this->instruction, 0x00FF);
+		if (registers[Vx] != NN)
+			program_counter += 2;
+	}
+	
+	void interpreter::ins_5XY0()
+	{
+		log("if 5XY0");
+		/* if(Vx==Vy) */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+		if (registers[Vx] == registers[Vy])
+			program_counter += 2;
+	}
+
+	void interpreter::ins_6XNN()
+	{
+		log("set 6XNN");
+		/* Vx = NN */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t NN = extract(this->instruction, 0x00FF);
+		registers[Vx] = NN;
+	}
+
+	void interpreter::ins_7XNN()
+	{
+		log("add 7XNN");
+		/* Vx += NN */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t NN = extract(this->instruction, 0x00FF);
+		registers[Vx] += NN;
+	}
+
+	void interpreter::ins_ANNN()
+	{
+		log("mem ANNN");
+		/* I = NNN */
+		uint16_t NNN = extract(this->instruction, 0x0FFF);
+		index = NNN;
+	}
+
+	void interpreter::ins_BNNN()
+	{
+		log("jmp BNNN");
+		/* PC=V0+NNN */
+		uint16_t NNN = extract(this->instruction, 0x0FFF);
+		program_counter = registers[0] + NNN;
+	}
+
+	void interpreter::ins_CXNN()
+	{
+		log("rand CXNN");
+		/* Vx=rand()&NN */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t NN = extract(this->instruction, 0x00FF);
+		registers[Vx] = rand() & NN; // TODO use a random seed.
+	}
+	
+	void interpreter::ins_DXYN()
+	{
+		/* implementation stolen from some documentation, ty */
+		
+		log("draw DXYN");
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+		uint8_t height = extract(this->instruction, 0x000F);
+
+		// Wrap if going beyond screen boundaries
+		uint8_t xPos = registers[Vx] % VIDEO_WIDTH;
+		uint8_t yPos = registers[Vy] % VIDEO_HEIGHT;
+
+		registers[0xF] = 0;
+
+		for (unsigned int row = 0; row < height; ++row)
+		{
+			uint8_t spriteByte = memory[index + row];
+
+			for (unsigned int col = 0; col < 8; ++col)
+			{
+				uint8_t spritePixel = spriteByte & (0x80 >> col);
+				uint32_t* screenPixel = &video[(yPos + row) * VIDEO_WIDTH + (xPos + col)];
+
+				// Sprite pixel is on
+				if (spritePixel)
+				{
+					// Screen pixel also on - collision
+					if (*screenPixel == 0xFFFFFFFF)
+					{
+						registers[0xF] = 1;
+					}
+
+					// Effectively XOR with the sprite pixel
+					*screenPixel ^= 0xFFFFFFFF;
+				}
+			}
+		}
+	}
+}
