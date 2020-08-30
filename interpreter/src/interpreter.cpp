@@ -46,7 +46,8 @@ namespace chip8
 
 		/* 8000 */
 		this->table_8000[0x0] = &interpreter::ins_8XY0;
-		this->table_8000[0x1] = &interpreter::ins_8XY0;
+		this->table_8000[0x1] = &interpreter::ins_8XY1;
+		this->table_8000[0X2] = &interpreter::ins_8XY2;
 
 		this->ins_00E0(); // Clean video data before we start executing.
 	}
@@ -201,6 +202,15 @@ namespace chip8
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
 		registers[Vx] = registers[Vx] |= registers[Vy];
+	}
+
+	void interpreter::ins_8XY2();
+	{
+		log("set 8XY2");
+		/* Vx=Vx&Vy */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+		registers[Vx] = registers[Vx] &= registers[Vy];
 	}
 
 	void interpreter::ins_ANNN()
