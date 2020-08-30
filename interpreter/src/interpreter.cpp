@@ -50,6 +50,7 @@ namespace chip8
 		this->table_8000[0x2] = &interpreter::ins_8XY2;
 		this->table_8000[0x3] = &interpreter::ins_8XY3;
 		this->table_8000[0x4] = &interpreter::ins_8XY4;
+		this->table_8000[0x5] = &interpreter::ins_8XY5;
 
 		this->ins_00E0(); // Clean video data before we start executing.
 	}
@@ -111,15 +112,15 @@ namespace chip8
 	{	
 		log("clear 00E0");
 		/* disp_clear() */
-		memset(this->video, 0, sizeof(video));
+		memset(this->video, 0, sizeof(this->video));
 	}
 
 	void interpreter::ins_00EE()
 	{
 		log("ret 00EE");
 		/* return; */
-		--stack_pointer;
-		program_counter = stack[stack_pointer];
+		--this->stack_pointer;
+		this->program_counter = this->stack[this->stack_pointer];
 	}
 
 	void interpreter::ins_1NNN()
@@ -127,7 +128,7 @@ namespace chip8
 		log("jmp 1NNN");
 		/* goto NNN; */
 		uint16_t NNN = extract(this->instruction, 0x0FFF);
-		program_counter = NNN;
+		this->program_counter = NNN;
 	}
 
 	void interpreter::ins_2NNN()
@@ -135,9 +136,9 @@ namespace chip8
 		log("call 2NNN");
 		/* *(0xNNN)() */
 		uint16_t NNN = extract(this->instruction, 0x0FFF);
-		stack[stack_pointer] = program_counter;
-		++stack_pointer;
-		program_counter = NNN;
+		this->stack[this->stack_pointer] = this->program_counter;
+		++this->stack_pointer;
+		this->program_counter = NNN;
 	}
 
 	void interpreter::ins_3XNN()
@@ -146,8 +147,8 @@ namespace chip8
 		/* if(Vx==NN) */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t NN = extract(this->instruction, 0x00FF);
-		if (registers[Vx] == NN)
-			program_counter += 2;
+		if (this->registers[Vx] == NN)
+			this->program_counter += 2;
 	}
 	
 	void interpreter::ins_4XNN()
@@ -156,8 +157,8 @@ namespace chip8
 		/* if(Vx!=NN) */	
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t NN = extract(this->instruction, 0x00FF);
-		if (registers[Vx] != NN)
-			program_counter += 2;
+		if (this->registers[Vx] != NN)
+			this->program_counter += 2;
 	}
 	
 	void interpreter::ins_5XY0()
@@ -166,8 +167,8 @@ namespace chip8
 		/* if(Vx==Vy) */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		if (registers[Vx] == registers[Vy])
-			program_counter += 2;
+		if (this->registers[Vx] == this->registers[Vy])
+			this->program_counter += 2;
 	}
 
 	void interpreter::ins_6XNN()
@@ -176,7 +177,7 @@ namespace chip8
 		/* Vx = NN */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t NN = extract(this->instruction, 0x00FF);
-		registers[Vx] = NN;
+		this->registers[Vx] = NN;
 	}
 
 	void interpreter::ins_7XNN()
@@ -185,7 +186,7 @@ namespace chip8
 		/* Vx += NN */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t NN = extract(this->instruction, 0x00FF);
-		registers[Vx] += NN;
+		this->registers[Vx] += NN;
 	}
 
 	void interpreter::ins_8XY0()
@@ -194,7 +195,7 @@ namespace chip8
 		/* Vx=Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] = registers[Vy];
+		this->registers[Vx] = this->registers[Vy];
 	}
 
 	void interpreter::ins_8XY1()
@@ -203,7 +204,7 @@ namespace chip8
 		/* Vx=Vx|Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] |= registers[Vy];
+		this->registers[Vx] |= this->registers[Vy];
 	}
 
 	void interpreter::ins_8XY2()
@@ -212,7 +213,7 @@ namespace chip8
 		/* Vx=Vx&Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] &= registers[Vy];
+		this->registers[Vx] &= this->registers[Vy];
 	}
 
 	void interpreter::ins_8XY3()
@@ -221,7 +222,7 @@ namespace chip8
 		/* Vx=Vx^Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] ^= registers[Vy];
+		this->registers[Vx] ^= this->registers[Vy];
 	}
 
 	void interpreter::ins_8XY4()
@@ -231,14 +232,30 @@ namespace chip8
 		/* Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't. */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		uint16_t V = (registers[Vx] + registers[Vy]);
+		uint16_t V = (this->registers[Vx] + this->registers[Vy]);
 		
 		if (V > 255)
-			registers[0xF] = 1;
+			this->registers[0xF] = 1;
 		else
-			registers[0xF] = 0;
+			this->registers[0xF] = 0;
 
-		registers[Vx] = extract(V, 0x00FF);
+		this->registers[Vx] = extract(V, 0x00FF);
+	}
+
+	void interpreter::ins_8XY5()
+	{
+		log("sub 8XY5");
+		/* Vx -= Vy */
+		/* VY is subtracted from VX. VF is set to 0 when there's a borrow */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+		
+		if (this->registers[Vx] > this->registers[Vy])
+			this->registers[0xF] = 1;
+		else
+			this->registers[0xF] = 0;
+
+		this->registers[Vx] -= this->registers[Vy]
 	}
 
 	void interpreter::ins_ANNN()
@@ -246,7 +263,7 @@ namespace chip8
 		log("mem ANNN");
 		/* I = NNN */
 		uint16_t NNN = extract(this->instruction, 0x0FFF);
-		index = NNN;
+		this->index = NNN;
 	}
 
 	void interpreter::ins_BNNN()
@@ -254,7 +271,7 @@ namespace chip8
 		log("jmp BNNN");
 		/* PC=V0+NNN */
 		uint16_t NNN = extract(this->instruction, 0x0FFF);
-		program_counter = registers[0] + NNN;
+		this->program_counter = this->registers[0] + NNN;
 	}
 
 	void interpreter::ins_CXNN()
@@ -263,7 +280,7 @@ namespace chip8
 		/* Vx=rand()&NN */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t NN = extract(this->instruction, 0x00FF);
-		registers[Vx] = rand() & NN; // TODO use a random seed.
+		this->registers[Vx] = rand() & NN; // TODO use a random seed.
 	}
 	
 	void interpreter::ins_DXYN()
@@ -276,19 +293,19 @@ namespace chip8
 		uint8_t height = extract(this->instruction, 0x000F);
 
 		// Wrap if going beyond screen boundaries
-		uint8_t xPos = registers[Vx] % VIDEO_WIDTH;
-		uint8_t yPos = registers[Vy] % VIDEO_HEIGHT;
+		uint8_t xPos = this->registers[Vx] % VIDEO_WIDTH;
+		uint8_t yPos = this->registers[Vy] % VIDEO_HEIGHT;
 
-		registers[0xF] = 0;
+		this->registers[0xF] = 0;
 
 		for (unsigned int row = 0; row < height; ++row)
 		{
-			uint8_t spriteByte = memory[index + row];
+			uint8_t spriteByte = this->memory[index + row];
 
 			for (unsigned int col = 0; col < 8; ++col)
 			{
 				uint8_t spritePixel = spriteByte & (0x80 >> col);
-				uint32_t* screenPixel = &video[(yPos + row) * VIDEO_WIDTH + (xPos + col)];
+				uint32_t* screenPixel = &this->video[(yPos + row) * VIDEO_WIDTH + (xPos + col)];
 
 				// Sprite pixel is on
 				if (spritePixel)
@@ -296,7 +313,7 @@ namespace chip8
 					// Screen pixel also on - collision
 					if (*screenPixel == 0xFFFFFFFF)
 					{
-						registers[0xF] = 1;
+						this->registers[0xF] = 1;
 					}
 
 					// Effectively XOR with the sprite pixel
