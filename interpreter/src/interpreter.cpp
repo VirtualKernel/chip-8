@@ -21,9 +21,13 @@ namespace chip8
 
 		std::fill_n(this->table, 0xF + 1, &interpreter::ins_NOP);
 		std::fill_n(this->table_0000, 0xE + 1, &interpreter::ins_NOP);
+		std::fill_n(this->table_8000, 0xE + 1, &interpreter::ins_NOP);
 
-		/* Singles */
+		/* Find */
 		this->table[0x0] = &interpreter::fnd_0000;
+		this->table[0x8] = &interpreter::fnd_8000;
+		
+		/* Immediate */
 		this->table[0x1] = &interpreter::ins_1NNN;
 		this->table[0x2] = &interpreter::ins_2NNN;
 		this->table[0x3] = &interpreter::ins_3XNN;
@@ -39,6 +43,9 @@ namespace chip8
 		/* 0000 */
 		this->table_0000[0x0] = &interpreter::ins_00E0;
 		this->table_0000[0xE] = &interpreter::ins_00EE;
+
+		/* 8000 */
+		this->table_8000[0x0] = &interpreter::ins_8XY0;
 
 		this->ins_00E0(); // Clean video data before we start executing.
 	}
@@ -82,6 +89,12 @@ namespace chip8
 	{
 		log("0x00E? called, looking up last digit.");
 		((*this).*(this->table_0000[extract(this->instruction, 0x000F)]))();
+	}
+
+	void interpreter::fnd_8000()
+	{
+		log("0x8XY? called, looking up last digit.");
+		((*this).*(this->table_8000[extract(this->instruction, 0x000F)]))();	
 	}
 
 	void interpreter::ins_NOP()
@@ -169,6 +182,16 @@ namespace chip8
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t NN = extract(this->instruction, 0x00FF);
 		registers[Vx] += NN;
+	}
+
+	void interpreter::ins_8XY0()
+	{
+		log("set 8XY0");
+		/* Vx=Vy */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+
+		registers[Vx] = registers[Vy];
 	}
 
 	void interpreter::ins_ANNN()

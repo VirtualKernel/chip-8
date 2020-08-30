@@ -35,6 +35,7 @@ namespace chip8
 
 		/* Instruction identifier */
 		void fnd_0000();
+		void fnd_8000();
 
 		/* Instruction functions */
 		void ins_NOP();  // default nop
@@ -47,6 +48,7 @@ namespace chip8
 		void ins_5XY0(); // if
 		void ins_6XNN(); // set
 		void ins_7XNN(); // add
+		void ins_8XY0(); // set
 		void ins_ANNN(); // mem
 		void ins_BNNN(); // jmp
 		void ins_CXNN(); // rand
@@ -56,5 +58,6 @@ namespace chip8
 		typedef void (interpreter::*function_table)();
 		function_table table[0xF + 1];
 		function_table table_0000[0xE + 1];
+		function_table table_8000[0xE + 1];
 	};
 }
