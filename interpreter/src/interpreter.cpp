@@ -49,6 +49,7 @@ namespace chip8
 		this->table_8000[0x1] = &interpreter::ins_8XY1;
 		this->table_8000[0x2] = &interpreter::ins_8XY2;
 		this->table_8000[0x3] = &interpreter::ins_8XY3;
+		this->table_8000[0x4] = &interpreter::ins_8XY4;
 
 		this->ins_00E0(); // Clean video data before we start executing.
 	}
@@ -222,7 +223,24 @@ namespace chip8
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
 		registers[Vx] ^= registers[Vy];
 	}
-	
+
+	void interpreter::ins_8XY4()
+	{
+		log("add 8XY4");
+		/* Vx += Vy */
+		/* Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't. */
+		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
+		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
+		uint16_t V = (registers[Vx] + registers[Vy]);
+		
+		if (V > 255)
+			registers[0xF] = 1;
+		else
+			registers[0xF] = 0;
+
+		registers[Vx] = extract(V, 0x00FF);
+	}
+
 	void interpreter::ins_ANNN()
 	{
 		log("mem ANNN");
