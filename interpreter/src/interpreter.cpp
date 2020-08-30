@@ -202,7 +202,7 @@ namespace chip8
 		/* Vx=Vx|Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] = registers[Vx] |= registers[Vy];
+		registers[Vx] |= registers[Vy];
 	}
 
 	void interpreter::ins_8XY2()
@@ -211,16 +211,16 @@ namespace chip8
 		/* Vx=Vx&Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] = registers[Vx] &= registers[Vy];
+		registers[Vx] &= registers[Vy];
 	}
 
-	void interpreter::ins_8XY3();
+	void interpreter::ins_8XY3()
 	{
 		log("set 8XY3");
 		/* Vx=Vx^Vy */
 		uint8_t Vx = extract(this->instruction, 0x0F00) >> 8;
 		uint8_t Vy = extract(this->instruction, 0x00F0) >> 4;
-		registers[Vx] = registers[Vx] ^= registers[Vy];
+		registers[Vx] ^= registers[Vy];
 	}
 	
 	void interpreter::ins_ANNN()
