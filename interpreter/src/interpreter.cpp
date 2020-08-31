@@ -5,6 +5,7 @@
 #include <cstring>
 #include <algorithm>
 #include <stdlib.h>
+#include <ctime>
 
 #define log(string) std::cout << "[interpreter][" << __FUNCTION__ << "] " << string << std::endl;
 
@@ -16,7 +17,9 @@ namespace chip8
 	interpreter::interpreter()
 	{
 		log("constructing interpreter");
-		
+
+		std::srand(std::time(nullptr));
+
 		this->program_counter = 0x200;
 
 		std::fill_n(this->table, 0xF + 1, &interpreter::ins_NOP);
